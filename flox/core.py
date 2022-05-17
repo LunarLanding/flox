@@ -1465,6 +1465,8 @@ def groupby_reduce(
 
     if not is_duck_array(array):
         array = np.asarray(array)
+    array = array.astype(int) if np.issubdtype(array.dtype, bool) else array
+
     if isinstance(isbin, bool):
         isbin = (isbin,) * len(by)
     if expected_groups is None:
@@ -1582,6 +1584,10 @@ def groupby_reduce(
                 for ax, idxr in zip(range(-by.ndim, 0), indexer):
                     array_subset = np.take(array_subset, idxr, axis=ax)
                 numblocks = np.prod([len(array_subset.chunks[ax]) for ax in axis])
+
+                # First deep copy becasue we might be doping blockwise,
+                # which sets agg.finalize=None, then map-reduce (GH102)
+                agg = copy.deepcopy(agg)
 
                 # get final result for these groups
                 r, *g = partial_agg(
